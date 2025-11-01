@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  cf-warp-proxy:
+    build: .
+    container_name: cf-warp-proxy
+    restart: unless-stopped
+    
+    ports:
+      - "1080:1080" # Primary SOCKS5 proxy port
+      # Uncomment below for multiple SOCKS5 ports if NUM_PORTS > 1
+      # - "1081:1081"
+      # - "1082:1082"
+      # - "1083:1083"
+      # - "1084:1084"
+      # - "1085:1085"
+      # - "1086:1086"
+      # - "1087:1087"
+      # - "1088:1088"
+      # - "1089:1089"
+      # - "1090:1090"
+    
+    environment:
+      # Number of SOCKS5 proxy ports to create (starting from 1080)
+      - NUM_PORTS=1
+      
+      # SOCKS5 authentication (leave empty to disable)
+      - SOCKS5_USER=
+      - SOCKS5_PASS=
+      
+      # GOST logging level (trace，debug，info，warn，error，fatal)
+      - GOST_LOGGER_LEVEL=info
+    
+    # Volume to persist WARP registration data
+    volumes:
+      - warp-data:/var/lib/cloudflare-warp
+
+volumes:
+  warp-data:

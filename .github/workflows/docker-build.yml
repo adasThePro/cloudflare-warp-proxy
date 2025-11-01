@@ -1,0 +1,118 @@
+name: Build and Push Docker Image
+
+concurrency:
+  group: build-and-push-${{ github.ref || github.workflow }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check-warp-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      warp_version: ${{ steps.check.outputs.warp_version }}
+      warp_sha256: ${{ steps.check.outputs.warp_sha256 }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check for new WARP version
+        id: check
+        run: |
+          output=$(python check_warp_version.py 2>&1) || exit_code=$?
+          exit_code=${exit_code:-0}
+
+          echo "DEBUG: check_warp_version.py exit=${exit_code}" >&2
+          echo "DEBUG: output=${output}" >&2
+
+          if [ "$exit_code" -eq 0 ]; then
+            version=$(echo "$output" | cut -d':' -f1)
+            sha256=$(echo "$output" | cut -d':' -f2)
+
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "warp_version=$version" >> $GITHUB_OUTPUT
+            echo "warp_sha256=$sha256" >> $GITHUB_OUTPUT
+
+            echo "New WARP version detected: $version"
+            echo "SHA256: $sha256"
+          else
+            if [ "$exit_code" -eq 1 ]; then
+              echo "No new WARP version available"
+              echo "should_build=false" >> $GITHUB_OUTPUT
+            else
+              echo "Error checking WARP version (exit code: $exit_code)." >&2
+              echo "$output" >&2
+              exit $exit_code
+            fi
+          fi
+
+      - name: Commit version file
+        if: steps.check.outputs.should_build == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .warp_version || true
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update WARP version to ${{ steps.check.outputs.warp_version }}"
+            git push
+          else
+            echo "No changes to .warp_version to commit."
+          fi
+
+  build-and-push:
+    needs: check-warp-version
+    if: needs.check-warp-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ needs.check-warp-version.outputs.warp_version }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            WARP_VERSION=${{ needs.check-warp-version.outputs.warp_version }}
+            WARP_SHA256=${{ needs.check-warp-version.outputs.warp_sha256 }}
