@@ -1,0 +1,10 @@
+# Ignore certificate files
+
+certs/*.crt
+certs/*.key
+certs/*.pem
+certs/*.p12
+certs/*.pfx
+
+# Keep the certs directory
+!certs/.gitkeep

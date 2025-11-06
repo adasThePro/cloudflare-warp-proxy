@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  cf-warp-proxy:
+    build: .
+    container_name: cf-warp-proxy
+    restart: unless-stopped
+    
+    ports:
+      # Proxy ports
+      - "1080-1880:1080-1880"
+
+    environment:
+      # GOST logging level (trace, debug, info, warn, error, fatal)
+      - GOST_LOGGER_LEVEL=info
+
+      # Proxy type configuration: number of ports for each type
+      # Set to 0 to disable
+      - SOCKS4_PORTS=0
+      - SOCKS5_PORTS=0
+      - HTTP_PORTS=0
+      - SOCKS4_TLS_PORTS=0
+      - SOCKS5_TLS_PORTS=0
+      - HTTP_TLS_PORTS=0
+      - HTTP2_TLS_PORTS=0
+
+      # Base ports for each proxy type
+      - SOCKS4_BASE_PORT=1080
+      - SOCKS5_BASE_PORT=1180
+      - HTTP_BASE_PORT=1280
+      - SOCKS4_TLS_BASE_PORT=1380
+      - SOCKS5_TLS_BASE_PORT=1480
+      - HTTP_TLS_BASE_PORT=1580
+      - HTTP2_TLS_BASE_PORT=1680
+
+      # Proxy authentication (both username and password must be set to enable)
+      # SOCKS4 does not support authentication
+      # SOCKS5 authentication
+      - SOCKS5_USER=
+      - SOCKS5_PASS=
+      # HTTP authentication
+      - HTTP_USER=
+      - HTTP_PASS=
+      # SOCKS5 TLS authentication
+      - SOCKS5_TLS_USER=
+      - SOCKS5_TLS_PASS=
+      # HTTP TLS authentication
+      - HTTP_TLS_USER=
+      - HTTP_TLS_PASS=
+      # HTTP2 TLS authentication
+      - HTTP2_TLS_USER=
+      - HTTP2_TLS_PASS=
+
+      # TLS certificate configuration
+      # Method 1: Place certificate files in 'certs' folder before building (copied during build)
+      # Method 2: Mount certificate files to /user-certs at runtime (uncomment volume below)
+      # If private key is password-protected, set TLS_KEY_PASS environment variable
+      - TLS_KEY_PASS=
+      # Force replacement of existing certificate files even if they are valid
+      - FORCE_CERT_REPLACE=
+
+    volumes:
+      - warp-data:/var/lib/cloudflare-warp
+      - certs:/etc/certs
+      # Uncomment below to mount certificate files at runtime (Method 2)
+      # Must contain server.crt and server.key files
+      # - /path/to/your/certs:/user-certs:ro
+
+volumes:
+  warp-data:
+  certs:

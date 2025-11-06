@@ -1,0 +1,5 @@
+# Place your certificate files here
+# Required files:
+#   - server.crt (certificate file)
+#   - server.key (private key file)
+# Optional: If your key is password-protected, set TLS_KEY_PASS environment variable
