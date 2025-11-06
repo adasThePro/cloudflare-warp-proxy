@@ -13,16 +13,7 @@ A Docker-based proxy service that routes traffic through Cloudflare WARP, provid
   - [Proxy Type](#proxy-type)
   - [Base Port](#base-port)
   - [Authentication](#authentication)
-    - [SOCKS4](#socks4)
-    - [SOCKS5](#socks5)
-    - [HTTP](#http)
-    - [SOCKS5 TLS](#socks5-tls)
-    - [HTTP TLS](#http-tls)
-    - [HTTP/2 TLS](#http2-tls)
   - [TLS Certificate](#tls-certificate)
-    - [Build-time](#build-time)
-    - [Run-time](#run-time)
-    - [Options](#options)
   - [Logging](#logging)
 - [DNS](#dns)
 - [Volumes](#volumes)
@@ -32,9 +23,9 @@ A Docker-based proxy service that routes traffic through Cloudflare WARP, provid
 
 - Mask real IP with Cloudflare IP
 - Multiple proxy protocols
-- Configurable authentication
+- Authentication support
 - Cloudflare DNS over HTTPS, TLS, and UDP
-- Optional TLS encryption for proxy connections
+- TLS encryption
 
 ## Quick Start
 
@@ -78,8 +69,6 @@ docker build -t cloudflare-warp-proxy .
 
 Configure the number of ports for each proxy type using these environment variables. Set to `0` to disable a proxy type.
 
-**Note:** HTTP/2 proxy requires TLS to be enabled.
-
 - `SOCKS4_PORTS`: Number of SOCKS4 ports
 - `SOCKS5_PORTS`: Number of SOCKS5 ports
 - `HTTP_PORTS`: Number of HTTP ports
@@ -88,7 +77,9 @@ Configure the number of ports for each proxy type using these environment variab
 - `HTTP_TLS_PORTS`: Number of TLS-enabled HTTP ports
 - `HTTP2_TLS_PORTS`: Number of TLS-enabled HTTP/2 ports
 
-**Note:**At least one proxy type must be enabled.
+>[!NOTE]
+> - At least one proxy type must be enabled.
+> - HTTP/2 proxy requires TLS to be enabled.
 
 ### Base Port
 
